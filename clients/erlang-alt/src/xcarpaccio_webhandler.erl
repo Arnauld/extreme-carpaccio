@@ -41,12 +41,19 @@ terminate(_Reason, _Req, _State) ->
 %% @doc
 %% @private
 %%
-handle0(Method = <<"POST">>, Path = <<"/">>, Req2) ->
-  Result = #{total=>0.0},
-  Body = json_utils:encode(Result),
-  io:format("xcarpaccio:handle0:[~p][~p] : ~p ~n", [Method, Path, Result]),
+handle0(Method = <<"POST">>, Path = <<"/">>, Req1) ->
+  {ok, ReqBody, Req2} = cowboy_req:body(Req1),
+  io:format("xcarpaccio:handle0:[~p][~p] << ~p ~n", [Method, Path, ReqBody]),
+  Input = json_utils:decode(ReqBody),
+  {ok,Prices} = json_utils:get_value(Input, <<"prices">>),
+  {ok,Quantities} = json_utils:get_value(Input, <<"quantities">>),
+  {ok,Country} = json_utils:get_value(Input, <<"country">>),
+  Total = xcarpaccio_biz:calculate_total(Prices, Quantities, Country),
+  Result = #{total=>Total},
+  ResBody = json_utils:encode(Result),
+  io:format("xcarpaccio:handle0:[~p][~p] >> ~p ~n", [Method, Path, Result]),
   cowboy_req:reply(200, [{<<"content-type">>, <<"application/json">>},
-                         {<<"content-encoding">>, <<"utf-8">>}], Body, Req2);
+                         {<<"content-encoding">>, <<"utf-8">>}], ResBody, Req2);
 
 
 %%
